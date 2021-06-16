@@ -48,7 +48,7 @@ class WorkerDiscovering:
     def start(self):
         self.loop = IOLoop()
         self.loop.add_handler(
-            self.udp.sock.fileno(), self.handle_beacon, IOLoop.WRITE )
+            self.udp.sock.fileno(), self.handle_beacon, IOLoop.READ)
 
         reaper = PeriodicCallback(self.reap_workers, 1000)
         reaper.start()
@@ -99,7 +99,7 @@ class WorkerDiscovering:
                         'worker': worker.uuid,
                     }
                 )
-                logging.info(f'Reaped worker {worker.uuid}')
+                # logging.info(f'Reaped worker {worker.uuid}')
 
 
 class UrlFeeder:
@@ -126,8 +126,8 @@ class Client:
     Send requests with url and expects the HTML code.
     """
 
-    def __init__(self, ip, port, url_file):
-        self.address = (ip, port)
+    def __init__(self, ip, url_file):
+        self.inter_ip = ip
         self.ctx = zmq.Context()
 
         self.sender_sock = None     # talk to workers
@@ -148,7 +148,7 @@ class Client:
         self.pipe_sock, pipe_sock = utils.pipe(self.ctx)
 
         self.discoverer = WorkerDiscovering(
-            self.address[0], self.ctx, pipe_sock)
+            self.inter_ip, self.ctx, pipe_sock)
         threading.Thread(
             target=self.discoverer.start, name='Discoverer').start()
         logging.info('Discovering service started...')
@@ -161,8 +161,8 @@ class Client:
             socks = dict(poller.poll())
 
             # process the updates from workers discovering service
-            if self.pipe_sock in socks and socks[self.pipe_sock]:
-                msg = self.pipe_sock.recv_json()
+            if self.pipe_sock in socks:
+                msg = self.pipe_sock.recv_json(zmq.DONTWAIT)
 
                 action = msg['action']
                 wid = msg['worker']
@@ -172,8 +172,6 @@ class Client:
                     if action in ('add', 'update'):
                         logging.warning(f'Worker {wid}: update without address')
                         continue
-                
-                # print()
 
                 if action == 'delete':
                     self.sender_sock.disconnect('tcp://%s:%d' % self.workers[wid])
@@ -196,7 +194,7 @@ class Client:
 
                 # process the responses from workers
                 if event in (zmq.POLLIN, zmq.POLLIN | zmq.POLLOUT):
-                    data = self.sender_sock.recv_json()
+                    data = self.sender_sock.recv_json(zmq.DONTWAIT)
                     self._save(data)
                     logging.info(f'Received {data["url"]} html code')
 
@@ -222,9 +220,9 @@ class Client:
 if __name__ == '__main__':
     import sys
 
-    if len(sys.argv) > 3:
-        _, ip, port, url_file = sys.argv
+    if len(sys.argv) > 2:
+        _, ip, url_file = sys.argv
 
-        client = Client(ip, int(port), url_file)
+        client = Client(ip, url_file)
 
         client.start()

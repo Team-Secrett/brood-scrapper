@@ -59,6 +59,11 @@ class Peer:
     def __hash__(self):
         return hash(self.uuid)
 
+    def __str__(self):
+        return f'({self.uuid}::{self.addr}, {self.expires_at})'
+
+    def __repr__(self):
+        return f'Peer{self.__str__()}'
 
 class Timestamp:
     """
