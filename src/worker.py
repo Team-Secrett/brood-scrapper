@@ -47,11 +47,13 @@ class Worker:
             target=self.ping_sender.start, name='Pinger').start()
         logging.info('Ping service started...')
 
+        import random
         while True:
             cid = self.sock.recv()
             request = self.sock.recv_json()
 
-            if 'url' in request:
+            n = random.randint(0, 1)
+            if 'url' in request and n:
                 # scrap url
                 html = f'<h1>html code for {request["url"]}</h1>'
                 resp = {

@@ -1,7 +1,7 @@
 """
 Client class.
 """
-from typing import Dict
+from typing import Dict, List, Tuple, Optional
 import logging
 import threading
 import time
@@ -104,20 +104,45 @@ class WorkerDiscovering:
 
 class UrlFeeder:
 
-    def __init__(self, fp):
-        self.buffer = []
+    def __init__(self, fp: str, timeout: int = 5):
+        self.buffer: List[str] = []
+        self.pendant: List[Tuple[str, int]] = []
+        self.timeout = timeout
 
         with open(fp, encoding='utf8') as f:
             for line in f:
                 self.buffer.append(line[:-1])
 
-    def feed(self):
+    def feed(self) -> Optional[str]:
+        """
+        Return an url from buffer and keep track of pendant urls.
+        """
+        # move expired url to buffer
+        now = time.time()
+        for p in list(self.pendant):
+            if p[1] < now:
+                self.buffer.append(p[0])
+                self.pendant.remove(p)
+
+        # return to client an url
         try:
-            return self.buffer.pop(0)
-        except IndexError:
+            self.pendant.append(
+                (url := self.buffer.pop(0), time.time() + self.timeout))
+            return url
+        except IndexError:  # buffer is empty
             return None
 
-    # TODO: Add pendent requests
+    def done(self, url: str):
+        """
+        Confirmation that url has been scrapped.
+        """
+        for p in list(self.pendant):
+            if p[0] == url:
+                self.pendant.remove(p)
+                break
+
+    def __bool__(self):
+        return bool(self.buffer) or bool(self.pendant)
 
 
 class Client:
@@ -164,6 +189,7 @@ class Client:
             if self.pipe_sock in socks:
                 msg = self.pipe_sock.recv_json(zmq.DONTWAIT)
 
+                # get action, worker id and addr (if is present)
                 action = msg['action']
                 wid = msg['worker']
                 try:
@@ -173,16 +199,19 @@ class Client:
                         logging.warning(f'Worker {wid}: update without address')
                         continue
 
+                # worker is not longer accessible, close the connection
                 if action == 'delete':
                     self.sender_sock.disconnect('tcp://%s:%d' % self.workers[wid])
                     self.workers.pop(wid)
                     logging.info(f'Removed worker {wid}')
 
+                # new worker, establish a connection
                 elif action == 'add':
                     self.sender_sock.connect('tcp://%s:%d' % addr)
                     self.workers[wid] = addr
                     logging.info(f'Added worker {wid}: {addr}')
 
+                # worker changed his interface, update the conection
                 elif action == 'update' and False:  # TODO: breaking with 2+ workers
                     self.sender_sock.disconnect('tcp://%s:%d' % self.workers[wid])
                     self.sender_sock.connect('tcp://%s:%d' % addr)
@@ -194,9 +223,14 @@ class Client:
 
                 # process the responses from workers
                 if event in (zmq.POLLIN, zmq.POLLIN | zmq.POLLOUT):
-                    data = self.sender_sock.recv_json(zmq.DONTWAIT)
-                    self._save(data)
-                    logging.info(f'Received {data["url"]} html code')
+                    res = self.sender_sock.recv_json(zmq.DONTWAIT)
+
+                    if 'url' in res:
+                        self.feeder.done(res['url'])
+                        self._save(res['html'])
+                        logging.info(f'Received {res["url"]} html code')
+                    else:
+                        logging.warning(f'Received: {res.get("error", "error")}')
 
                 # make a request to workers
                 if event in (zmq.POLLOUT, zmq.POLLIN | zmq.POLLOUT) and self.workers:
@@ -209,6 +243,9 @@ class Client:
                         )
                         logging.info(f'Requested {url}')
                         time.sleep(1)   # TODO: remove this
+
+            if not self.feeder:
+                break
 
     def _save(self, data):
         """
