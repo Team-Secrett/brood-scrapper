@@ -5,8 +5,10 @@ from settings import (
 )
 import udp
 import utils
+from utils import Cache
 import threading
 import logging
+import json
 
 
 logging.basicConfig(
@@ -27,6 +29,8 @@ class Storage:
         self.sub_sock = None
         self.id = utils.random_id()
         self.ping_sender = None
+
+        self.cache = Cache()
 
     def connect_sub(self):
         self.sub_sock = self.ctx.socket(zmq.SUB)
@@ -59,8 +63,17 @@ class Storage:
             socks = dict(poller.poll())
 
             if self.sub_sock in socks:
-                inp = self.sub_sock.recv_string()
-                print(inp)
+                rec = self.sub_sock.recv_multipart()
+                data = json.loads(rec[1])
+
+                try:
+                    url, content = data['url'], data['content']
+                    self.cache.set(url, content)
+                    logging.info(f'Added {url} content to cache...')
+                except KeyError:
+                    logging.info(
+                        f'Storage {self.id}: Received malformed data...')
+                    continue
 
 
 if __name__ == '__main__':
