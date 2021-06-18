@@ -17,10 +17,10 @@ class Cache:
         if not os.path.exists(self.path):
             os.makedirs(self.path)
 
-    def get(self, filename: str) -> str | None:
+    def get(self, filename: str) -> str:
         with open(os.path.join(self.path, filename), 'r') as fd:
             print(fd.readlines())
 
-    def set(self, filename: str, content: str) -> None:
+    def set(self, filename: str, content: str):
         with open(os.path.join(self.path, filename), 'w') as fd:
             fd.write(content)
