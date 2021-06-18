@@ -18,8 +18,11 @@ class Cache:
             os.makedirs(self.path)
 
     def get(self, filename: str) -> str:
-        with open(os.path.join(self.path, filename), 'r') as fd:
-            print(fd.readlines())
+        try:
+            with open(os.path.join(self.path, filename), 'r') as fd:
+                return fd.read()
+        except FileNotFoundError:
+            return None
 
     def set(self, filename: str, content: str):
         with open(os.path.join(self.path, filename), 'w') as fd:

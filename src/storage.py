@@ -3,9 +3,9 @@ import logging
 import json
 
 import zmq
+from zmq.sugar import poll
 
 from src.settings import (
-    PUB_SUB_CHANNEL_NAME,
     STORAGE_MCAST_ADDR
 )
 from src.utils.storage import Cache
@@ -27,17 +27,11 @@ class Storage:
     def __init__(self, ip, port, sport):
         self.address = (ip, port)
         self.ctx = zmq.Context()
-        self.sub_sock = None
         self.id = random_id()
         self.ping_sender = None
+        self.router_sock = None
 
         self.cache = Cache()
-
-    def connect_sub(self):
-        self.sub_sock = self.ctx.socket(zmq.SUB)
-        self.sub_sock.connect('tcp://%s:%d' % self.address)
-        self.sub_sock.subscribe(PUB_SUB_CHANNEL_NAME)
-        print('Subscriber: Connecting to %s:%d...' % self.address)
 
     def init_ping_sender(self):
         self.ping_sender = UDPSender(
@@ -50,29 +44,81 @@ class Storage:
         threading.Thread(target=self.ping_sender.start, name='Ping-Workers').start()
         logging.info(f'Storage {self.id}: Ping service started...')
 
+    def bind_router(self):
+        self.router_sock = self.ctx.socket(zmq.ROUTER)
+        self.router_sock.bind('tcp://%s:%s' % self.address)
+
     def start(self):
         """
         Start storage service
         """
-        self.connect_sub()
-
-        poller = zmq.Poller()
-        poller.register(self.sub_sock, zmq.POLLIN | zmq.POLLOUT)
-
+        self.bind_router()
         self.init_ping_sender()
 
+        poller = zmq.Poller()
+        poller.register(self.router_sock, zmq.POLLIN | zmq.POLLOUT)
+
+        logging.info(f'Storage {self.id}: Router service started...')
+        print(self.address)
         while True:
             socks = dict(poller.poll())
 
-            if self.sub_sock in socks:
-                rec = self.sub_sock.recv_multipart()
-                data = json.loads(rec[1])
-
+            if self.router_sock in socks:
                 try:
-                    url, content = data['url'], data['content']
-                    self.cache.set(url, content)
-                    logging.info(f'Added {url} content to cache...')
-                except KeyError:
+                    conn_id = self.router_sock.recv(zmq.DONTWAIT)
+                    req = self.router_sock.recv_json(zmq.DONTWAIT)
+
                     logging.info(
-                        f'Storage {self.id}: Received malformed data...')
-                    continue
+                        f'Storage {self.id}: Processing incoming request...')
+
+                    print('conn_id', conn_id)
+                    print('req', req)
+
+                    res = self._handle_request(req)
+
+                    if res is not None:
+                        print('Sending response:', res)
+                        self.router_sock.send(conn_id, zmq.SNDMORE)
+                        self.router_sock.send_json(res)
+                except zmq.error.Again:
+                    pass
+
+    def _handle_request(self, req: dict):
+        """
+        request format:
+            {
+                "id": "client-id",
+                "url": "www.example.com"
+            } -> for fetch
+
+            {
+                "url": "www.example.com",
+                "content": "<h1>html code for www.example.com</h1>"
+            } -> for update
+
+        response format (only for fetch's):
+            {
+                "id": "client-id",
+                "url": "www.example.com",
+                "hit": true,  // or false
+                "content": "<h1>html code for www.example.com</h1>"
+            }
+        """
+
+        if 'content' in req: # update request
+            url, content = req['url'], req['content']
+
+            self.cache.set(url, content)
+
+            return None # empty response
+        else: # fetch request
+            url = req['url']
+
+            content = self.cache.get(url)
+
+            return {
+                'id': req['id'],
+                'url': url,
+                'hit': content is not None,
+                'content': content
+            }
