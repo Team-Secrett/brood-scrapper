@@ -54,7 +54,7 @@ class StorageDisc(DiscoveringInterface):
                     }
                 )
         else:
-            self.peers[sid] = Peer(sid, (addr[0], sport))
+            self.peers[sid] = Peer(sid, (addr[0], int(sport)))
             self.pipe_sock.send_json(
                 {
                     'action': 'add',

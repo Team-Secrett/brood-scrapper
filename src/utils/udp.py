@@ -41,9 +41,10 @@ class UDPSender:
     Class for send beacons in a multicast group.
     """
 
-    def __init__(self, worker_id, worker_port, inter_ip, mcast_addr):
-        self.worker_id = worker_id
-        self.worker_port = worker_port
+    def __init__(self, flag, id, port, inter_ip, mcast_addr):
+        self.flag = flag
+        self.id = id
+        self.port = port
         self.inter_ip = inter_ip
         self.mcast_addr = mcast_addr
 
@@ -55,7 +56,7 @@ class UDPSender:
 
         while True:
             sock.sendto(
-                f'w {self.worker_id} {self.worker_port}'.encode('utf8'),
+                f'{self.flag} {self.id} {self.port}'.encode('utf8'),
                 self.mcast_addr
             )
             time.sleep(interval)

@@ -1,15 +1,16 @@
+import threading
+import logging
+import json
+
 import zmq
+
 from src.settings import (
     PUB_SUB_CHANNEL_NAME,
     STORAGE_MCAST_ADDR
 )
 from src.utils.storage import Cache
-import src.utils.udp as udp
+from src.utils.udp import UDPSender
 from src.utils.functions import random_id
-import threading
-import logging
-import json
-
 
 logging.basicConfig(
     format='[%(levelname)s]: %(message)s',
@@ -23,7 +24,7 @@ class Storage:
     Manage url caching
     """
 
-    def __init__(self, ip, port):
+    def __init__(self, ip, port, sport):
         self.address = (ip, port)
         self.ctx = zmq.Context()
         self.sub_sock = None
@@ -39,13 +40,14 @@ class Storage:
         print('Subscriber: Connecting to %s:%d...' % self.address)
 
     def init_ping_sender(self):
-        self.ping_sender = udp.UDPSender(
+        self.ping_sender = UDPSender(
+            's',
             self.id,
             self.address[1],
             self.address[0],
             STORAGE_MCAST_ADDR
         )
-        threading.Thread(target=self.ping_sender.start, name='Pinger').start()
+        threading.Thread(target=self.ping_sender.start, name='Ping-Workers').start()
         logging.info(f'Storage {self.id}: Ping service started...')
 
     def start(self):

@@ -68,6 +68,7 @@ class Worker:
 
         # start ping to clients service
         self.ping_sender = UDPSender(
+            'w',
             self.id,
             self.address[1],
             self.address[0],
@@ -107,20 +108,20 @@ class Worker:
                 if action == 'delete':
                     self.st_sock.disconnect('tcp://%s:%d' % self.storages[sid])
                     self.storages.pop(sid)
-                    logging.info(f'Removed worker {sid}')
+                    logging.info(f'Removed storage {sid}')
 
                 # new worker, establish a connection
                 elif action == 'add':
                     self.st_sock.connect('tcp://%s:%d' % addr)
                     self.storages[sid] = addr
-                    logging.info(f'Added worker {sid}: {addr}')
+                    logging.info(f'Added storage {sid}: {addr}')
 
                 # worker changed his interface, update the conection
                 elif action == 'update':  # TODO: breaking with 2+ storages
                     self.st_sock.disconnect('tcp://%s:%d' % self.storages[sid])
                     self.st_sock.connect('tcp://%s:%d' % addr)
                     old_addr, self.storages[sid] = self.storages[sid], addr
-                    logging.info(f'Updated worker {sid}: {old_addr} -> {addr}')
+                    logging.info(f'Updated storage {sid}: {old_addr} -> {addr}')
 
             # =============================================
 
