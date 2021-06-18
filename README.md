@@ -13,7 +13,8 @@
 
     ```json
     {
-        'url': 'www.example.com'
+        "id": "client-id",
+        "url": "www.example.com"
     }
     ```
 
@@ -21,7 +22,37 @@
 
     ```json
     {
-        'url': 'www.example.com'.
-        'html': '<h1>html code for www.example.com</h1>'
+        "url": "www.example.com",
+        "hit": true,  // or false
+        "content": "<h1>html code for www.example.com</h1>"
+    }
+    ```
+
+- Request from worker to storage
+
+    ```json
+    {
+        "id": "client-id",
+        "url": "www.example.com"
+    }
+    ```
+
+- Rsponse from strorage to worker
+
+    ```json
+    {
+        "id": "client-id",
+        "url": "www.example.com",
+        "hit": true,  // or false
+        "content": "<h1>html code for www.example.com</h1>"
+    }
+    ```
+
+- Update from worker to strorage
+
+    ```json
+    {
+        "url": "www.example.com",
+        "content": "<h1>html code for www.example.com</h1>"
     }
     ```

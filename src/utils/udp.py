@@ -1,3 +1,6 @@
+"""
+UDP multicast groups comunication interfaces.
+"""
 from typing import List, Tuple
 import struct
 import socket
