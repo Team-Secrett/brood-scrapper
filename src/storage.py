@@ -1,11 +1,11 @@
 import zmq
-from settings import (
+from src.settings import (
     PUB_SUB_CHANNEL_NAME,
     STORAGE_MCAST_ADDR
 )
-import udp
-import utils
-from utils import Cache
+from src.utils.storage import Cache
+import src.utils.udp as udp
+from src.utils.functions import random_id
 import threading
 import logging
 import json
@@ -27,7 +27,7 @@ class Storage:
         self.address = (ip, port)
         self.ctx = zmq.Context()
         self.sub_sock = None
-        self.id = utils.random_id()
+        self.id = random_id()
         self.ping_sender = None
 
         self.cache = Cache()
@@ -74,12 +74,3 @@ class Storage:
                     logging.info(
                         f'Storage {self.id}: Received malformed data...')
                     continue
-
-
-if __name__ == '__main__':
-    storage = Storage('192.168.43.242', 5001)
-
-    try:
-        storage.start()
-    except KeyboardInterrupt:
-        logging.info('\nClosing storage node...')
