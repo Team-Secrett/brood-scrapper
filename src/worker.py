@@ -26,7 +26,6 @@ class Worker:
         self.ping_sender = None     # send beacons to workers mcast group
 
         self.st_sock = None     # talk to storage
-        self.upd_scok = None    # update storage servers
         self.disc_sock = None   # recv updates of storages up and down
 
         self.discoverer = None  # storage discovering service
@@ -114,6 +113,7 @@ class Worker:
                 elif action == 'add':
                     self.st_sock.connect('tcp://%s:%d' % addr)
                     self.storages[sid] = addr
+                    print('tcp://%s:%d' % addr)
                     logging.info(f'Added storage {sid}: {addr}')
 
                 # worker changed his interface, update the conection
@@ -134,10 +134,11 @@ class Worker:
                 if socks[self.st_sock] in (zmq.POLLIN, zmq.POLLIN | zmq.POLLOUT):
                     res = self.st_sock.recv_json(zmq.DONTWAIT)
 
-                    if 'hit' in res:
-                        id_url = (res['id'], res['url'])
-                        self.monitor.move_caching_to_ready(id_url, res['content'])
-                    else:
+                    try:
+                        if res['hit']:
+                            id_url = (res['id'], res['url'])
+                            self.monitor.move_caching_to_ready(id_url, res['content'])
+                    except KeyError:
                         logging.warning('Bad response from cache')
 
                 # send update/request to storage
@@ -155,14 +156,14 @@ class Worker:
 
                     # send request to cache if there is in queue
                     id_url = self.monitor.new_next()
-                    if id_url is not None and False:
+                    if id_url is not None:
                         self.st_sock.send_json(
                             {
                                 "id": id_url[0],
                                 "url": id_url[1],
                             }
                         )
-                        print(f'Requested to cache: {id_url[1]}')
+                        # logging.info(f'Requested to cache: {id_url[1]}')
 
             # =============================================
 

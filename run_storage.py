@@ -25,6 +25,7 @@ args = parser.parse_args()
 
 storage = Storage(args.ip, args.wport, args.sport)
 
+storage.start()
 try:
     storage.start()
 except KeyboardInterrupt:

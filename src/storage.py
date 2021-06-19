@@ -1,9 +1,7 @@
 import threading
 import logging
-import json
 
 import zmq
-from zmq.sugar import poll
 
 from src.settings import (
     STORAGE_MCAST_ADDR
@@ -59,29 +57,30 @@ class Storage:
         poller.register(self.router_sock, zmq.POLLIN | zmq.POLLOUT)
 
         logging.info(f'Storage {self.id}: Router service started...')
-        print(self.address)
+
+        res_queue = []
+
         while True:
             socks = dict(poller.poll())
 
             if self.router_sock in socks:
-                try:
+                if socks[self.router_sock] in (zmq.POLLIN, zmq.POLLIN | zmq.POLLOUT):
                     conn_id = self.router_sock.recv(zmq.DONTWAIT)
                     req = self.router_sock.recv_json(zmq.DONTWAIT)
-
+                    res_queue.append((conn_id, self._handle_request(req)))
                     logging.info(
                         f'Storage {self.id}: Processing incoming request...')
 
-                    print('conn_id', conn_id)
-                    print('req', req)
-
-                    res = self._handle_request(req)
-
-                    if res is not None:
-                        print('Sending response:', res)
-                        self.router_sock.send(conn_id, zmq.SNDMORE)
-                        self.router_sock.send_json(res)
-                except zmq.error.Again:
-                    pass
+                if socks[self.router_sock] in (zmq.POLLOUT, zmq.POLLIN | zmq.POLLOUT):
+                    try:
+                        conn_id, res = res_queue.pop(0)
+                    except IndexError:
+                        pass
+                    else:
+                        if res is not None:
+                            self.router_sock.send(conn_id, zmq.SNDMORE)
+                            self.router_sock.send_json(res)
+                            logging.info(f'Sended hit to {conn_id}: {res["url"]}')
 
     def _handle_request(self, req: dict):
         """
@@ -110,6 +109,7 @@ class Storage:
 
             self.cache.set(url, content)
 
+            logging.info(f'Updated cache: {url}')
             return None # empty response
         else: # fetch request
             url = req['url']

@@ -245,7 +245,7 @@ class Scrapper:
         while True:
             id_url = monitor.scrapping_next()
             if id_url is not None:
-                content = Scrapper._get(id_url[1])
+                content = Scrapper._get('http://' + id_url[1])
                 monitor.move_scrapping_to_ready(id_url, content)
                 logging.info(
                     f'Scrapped {id_url[1]}, content length: {len(content)}')
