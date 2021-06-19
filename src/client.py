@@ -9,6 +9,7 @@ import zmq
 
 from src.utils.client import UrlFeeder, WorkerDisc
 from src.utils.functions import random_id, pipe
+from utils.storage import Cache
 
 
 logging.basicConfig(
@@ -104,7 +105,7 @@ class Client:
                     else:
                         if 'url' in res:
                             self.feeder.done(res['url'])
-                            self._save(res['content'])
+                            self._save(res['url'], res['content'])
                             logging.info(f'Received {res["url"]}. Missing: {len(self.feeder)}')
                         else:
                             logging.warning(f'Received: {res.get("error", "error")}')
@@ -126,8 +127,8 @@ class Client:
                 logging.info('>>> Done!')
                 break
 
-    def _save(self, data):
+    def _save(self, url: str, content: str):
         """
         How must be saved html code received
         """
-        pass
+        Cache(cache_folder='result').set(url, content)
