@@ -53,6 +53,27 @@
     ```json
     {
         "url": "www.example.com",
-        "content": "<h1>html code for www.example.com</h1>"
+        "content": "<h1>html code for www.example.com</h1>",
+        "spread": true
+    }
+    ```
+
+- Update cache request
+
+    ```json
+    {
+        "id": "storage-id",
+        "new": true,
+        "updateme": true,
+    }
+    ```
+
+- Update from storage to storage
+
+    ```json
+    {
+        "url": "www.example.com",
+        "content": "<h1>html code for www.example.com</h1>",
+        "spread": false
     }
     ```

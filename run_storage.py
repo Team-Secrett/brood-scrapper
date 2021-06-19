@@ -13,17 +13,20 @@ parser.add_argument(
     help='Interface IP address'
 )
 parser.add_argument(
-    '--wport', type=int, required=True,
+    '--port', type=int, required=True,
     help='Port to listen workers connections'
 )
 parser.add_argument(
-    '--sport', type=int, required=True,
-    help='Port to listen other workers connections'
+    '--cache', type=str, default='cache',
+    help='Cache folder path'
 )
-
+parser.add_argument(
+    '--update', action='store_true',
+    help='If present this storage will update his cache'
+)
 args = parser.parse_args()
 
-storage = Storage(args.ip, args.wport, args.sport)
+storage = Storage(args.ip, args.port, args.cache, args.update)
 
 storage.start()
 try:

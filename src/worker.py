@@ -113,7 +113,6 @@ class Worker:
                 elif action == 'add':
                     self.st_sock.connect('tcp://%s:%d' % addr)
                     self.storages[sid] = addr
-                    print('tcp://%s:%d' % addr)
                     logging.info(f'Added storage {sid}: {addr}')
 
                 # worker changed his interface, update the conection
@@ -135,9 +134,11 @@ class Worker:
                     res = self.st_sock.recv_json(zmq.DONTWAIT)
 
                     try:
+                        id_url = (res['id'], res['url'])
                         if res['hit']:
-                            id_url = (res['id'], res['url'])
                             self.monitor.move_caching_to_ready(id_url, res['content'])
+                        else:
+                            self.monitor.move_caching_to_scrapping(id_url)
                     except KeyError:
                         logging.warning('Bad response from cache')
 
@@ -150,6 +151,7 @@ class Worker:
                             {
                                 "url": url,
                                 "content": content,
+                                "spread": True,
                             }
                         )
                         logging.info(f'Updated cache: {url}')
@@ -196,7 +198,8 @@ class Worker:
                             f'Served request from {req.client_conn}: {id_url[1]} '
                             f'{"[hit]" if req.hit else "[not hit]"}'
                         )
-                        self.pendant_updates.append((id_url[1], req.content))
+                        if not req.hit:
+                            self.pendant_updates.append((id_url[1], req.content))
 
 
 if __name__ == '__main__':
