@@ -17,8 +17,8 @@ from src.utils.common import DiscoveringInterface, Peer
 
 
 logging.basicConfig(
-    # format='[%(levelname) 5s/%(asctime)s] %(name)s: %(message)s',
-    format='[%(levelname)s]: %(message)s',
+    format='[%(levelname)s/%(asctime)s] %(name)s: %(message)s',
+    # format='[%(levelname)s]: %(message)s',
     level=logging.INFO
 )
 
@@ -122,7 +122,7 @@ class RequestsMonitor:
     def prune_caching(self):
         """
         This method should be invoked in a single thread.
-        Pop expired requests in caching adn put it to scrapping queue.
+        Pop expired requests in caching and put it to scrapping queue.
         """
         while True:
             with self.lock:
