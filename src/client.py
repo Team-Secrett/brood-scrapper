@@ -11,7 +11,7 @@ from src.utils.client import UrlFeeder, WorkerDisc
 from src.utils.functions import random_id, pipe
 from src.utils.storage import Cache
 from src import settings
-from src.utils.html import HTMLParser
+from src.utils.html import HTMLParser, URLParser
 
 
 logging.basicConfig(
@@ -40,6 +40,8 @@ class Client:
         self.discoverer = None      # discovering service
 
         self.feeder = UrlFeeder(url_file, n)
+
+        self.url_depths = {}
 
     def start(self):
         """
@@ -106,15 +108,22 @@ class Client:
                         pass
                     else:
                         if 'url' in res:
-                            url, depth = self.feeder.done(res['url'])
+                            self.feeder.done(res['url'])
+                            if res['url'] not in self.url_depths:
+                                self.url_depths[res['url']] = 0
+                            depth = self.url_depths[res['url']]
                             
-                            if depth < settings.MAX_DEPTH:
+                            if depth + 1 < settings.MAX_DEPTH:
                                 # Get urls in html content
                                 next_urls = HTMLParser.links(res['content'])
 
                                 # Add html urls to buffer
                                 for nurl in next_urls:
-                                    self.feeder.append(nurl, depth + 1)
+                                    if res['url'] == URLParser.netloc(nurl):
+                                        self.feeder.append(nurl)
+                                        self.url_depths[nurl] = depth + 1
+                                    else:
+                                        print('different', res['url'], nurl)
 
                             self._save(res['url'], res['content'])
                             logging.info(f'Received {res["url"]}. Missing: {len(self.feeder)}')

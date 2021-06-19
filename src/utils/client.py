@@ -55,9 +55,8 @@ class WorkerDisc(DiscoveringInterface):
 
 
 class UrlFeeder:
-
     def __init__(self, fp: str, n: int, timeout: int = 30):
-        self.buffer: List[Tuple[str, int]] = []
+        self.buffer: List[str] = []
         self.pendant: List[Tuple[str, int]] = []
         self.timeout = timeout
 
@@ -65,22 +64,10 @@ class UrlFeeder:
             c = 0
             for line in f:
                 if not line.startswith('#'):
-                    self.buffer.append((line[:-1], 0))
+                    self.buffer.append(line[:-1])
                     c += 1
                     if c == n:
                         break
-
-    def append(self, url: str, depth: int = 0):
-        """
-        Add url to buffer
-        """
-        self.buffer.append((url, depth))
-
-    def find_pending(self, url: str) -> Optional[List[Tuple[str, int]]]:
-        for i in self.buffer:
-            if i[0] == url:
-                return i
-        return None
 
     def feed(self) -> Optional[str]:
         """
@@ -101,19 +88,24 @@ class UrlFeeder:
         except IndexError:  # buffer is empty
             return None
 
-    def done(self, url: str) -> Optional[Tuple[str, int]]:
+    def append(self, url: str):
         """
-        Confirmation that url has been scrapped. If url exists then return item
+        Add a new url to pending buffer
+        """
+        self.buffer.append(url)
+
+    def done(self, url: str):
+        """
+        Confirmation that url has been scrapped.
         """
         for p in list(self.pendant):
             if p[0] == url:
-                ret = p
                 self.pendant.remove(p)
-                return ret
-        return None
+                break
 
     def __len__(self):
         return len(self.buffer) + len(self.pendant)
 
     def __bool__(self):
         return self.__len__() > 0
+
