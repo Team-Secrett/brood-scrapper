@@ -9,7 +9,7 @@ import zmq
 
 from src.utils.client import UrlFeeder, WorkerDisc
 from src.utils.functions import random_id, pipe
-from utils.storage import Cache
+from src.utils.storage import Cache
 
 
 logging.basicConfig(
