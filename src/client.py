@@ -10,6 +10,8 @@ import zmq
 from src.utils.client import UrlFeeder, WorkerDisc
 from src.utils.functions import random_id, pipe
 from src.utils.storage import Cache
+from src import settings
+from src.utils.html import HTMLParser
 
 
 logging.basicConfig(
@@ -104,7 +106,16 @@ class Client:
                         pass
                     else:
                         if 'url' in res:
-                            self.feeder.done(res['url'])
+                            url, depth = self.feeder.done(res['url'])
+                            
+                            if depth < settings.MAX_DEPTH:
+                                # Get urls in html content
+                                next_urls = HTMLParser.links(res['content'])
+
+                                # Add html urls to buffer
+                                for nurl in next_urls:
+                                    self.feeder.append(nurl, depth + 1)
+
                             self._save(res['url'], res['content'])
                             logging.info(f'Received {res["url"]}. Missing: {len(self.feeder)}')
                         else:
