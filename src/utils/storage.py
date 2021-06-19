@@ -27,3 +27,17 @@ class Cache:
     def set(self, filename: str, content: str):
         with open(os.path.join(self.path, filename), 'w') as fd:
             fd.write(content)
+
+    def __iter__(self):
+        for file in os.listdir(self.path):
+            with open(f'{self.path}/{file}') as fd:
+                content = fd.read()
+                yield (file, content)
+
+
+
+if __name__ == '__main__':
+    cache = Cache()
+
+    for file, content in cache:
+        print(file, content)
