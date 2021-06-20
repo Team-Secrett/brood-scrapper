@@ -42,7 +42,7 @@ class Client:
         self.feeder = UrlFeeder(url_file, n)
 
         self.url_depths = {}
-        self.cache = Cache(cache_folder='results')
+        self.cache = Cache(cache_folder='result')
 
     def start(self):
         """
@@ -123,8 +123,6 @@ class Client:
                                     if res['url'] == URLParser.netloc(nurl) and self.cache.get(nurl) is None:
                                         self.feeder.append(nurl)
                                         self.url_depths[nurl] = depth + 1
-                                    else:
-                                        print('different', res['url'], nurl)
 
                             self._save(res['url'], res['content'])
                             logging.info(f'Received {res["url"]}. Missing: {len(self.feeder)}')
