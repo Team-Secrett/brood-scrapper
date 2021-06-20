@@ -2,6 +2,7 @@
 Tyes for storage nodes.
 """
 import os
+import re
 
 
 class Cache:
@@ -18,6 +19,8 @@ class Cache:
             os.makedirs(self.path)
 
     def get(self, filename: str) -> str:
+        filename = re.sub('https?://', '', filename)
+        filename = re.sub(r'\?|/', '_', filename)
         try:
             with open(os.path.join(self.path, filename), 'r') as fd:
                 return fd.read()
@@ -25,6 +28,8 @@ class Cache:
             return None
 
     def set(self, filename: str, content: str):
+        filename = re.sub('https?://', '', filename)
+        filename = re.sub(r'\?|/', '_', filename)
         with open(os.path.join(self.path, filename), 'w') as fd:
             fd.write(content)
 
@@ -33,7 +38,6 @@ class Cache:
             with open(f'{self.path}/{file}') as fd:
                 content = fd.read()
                 yield (file, content)
-
 
 
 if __name__ == '__main__':

@@ -171,6 +171,14 @@ class RequestsMonitor:
             id_url, req = self._first(self.scrapping, False)
             return id_url
 
+    def scrapping_pop(self) -> None:
+        """
+        Pop the first element in scrapping queue, this should be called
+        in case of resolving name failure.
+        """
+        with self.lock:
+            self._first(self.scrapping, True)
+
     def ready_next(self) -> Tuple[Tuple[str, str], Request]:
         """
         Pop and return next request ready to be delivered to client.
@@ -235,7 +243,20 @@ class Scrapper:
 
     @staticmethod
     def _get(url: str, params: dict = {}, timeout: float = None) -> Response:
-        return requests.get(url, params, timeout=timeout).content.decode('utf8')
+        max_retries = 3
+        retries = 0
+        try:
+            return requests.get(url, params, timeout=timeout).content.decode('utf8')
+        except requests.exceptions.ConnectionError:
+            logging.warning(f'Connection error to: {url}')
+            if retries == max_retries:
+                return None
+            else:
+                logging.info('Retrying...')
+                time.sleep(1)
+                retries += 1
+        except UnicodeDecodeError:
+            return 'Decode error!!!'
 
     @staticmethod
     def start_scrapper(monitor: RequestsMonitor):
@@ -245,7 +266,12 @@ class Scrapper:
         while True:
             id_url = monitor.scrapping_next()
             if id_url is not None:
-                content = Scrapper._get('http://' + id_url[1])
-                monitor.move_scrapping_to_ready(id_url, content)
-                logging.info(
-                    f'Scrapped {id_url[1]}, content length: {len(content)}')
+                url = 'http://' + id_url[1] if not id_url[1].startswith('http') else id_url[1]
+                logging.info(f'Scrapping: {url}')
+                content = Scrapper._get(url)
+                if content is not None:
+                    monitor.move_scrapping_to_ready(id_url, content)
+                    logging.info(
+                        f'Scrapped {url}, content length: {len(content)}')
+                else:
+                    monitor.scrapping_pop()
