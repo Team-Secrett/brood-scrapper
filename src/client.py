@@ -42,6 +42,7 @@ class Client:
         self.feeder = UrlFeeder(url_file, n)
 
         self.url_depths = {}
+        self.cache = Cache(cache_folder='results')
 
     def start(self):
         """
@@ -119,7 +120,7 @@ class Client:
 
                                 # Add html urls to buffer
                                 for nurl in next_urls:
-                                    if res['url'] == URLParser.netloc(nurl):
+                                    if res['url'] == URLParser.netloc(nurl) and self.cache.get(nurl) is None:
                                         self.feeder.append(nurl)
                                         self.url_depths[nurl] = depth + 1
                                     else:
