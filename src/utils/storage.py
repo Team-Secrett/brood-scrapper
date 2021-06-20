@@ -11,7 +11,7 @@ class Cache:
 
     Operations:
         get(filename: str) -> str | None
-        set(filename: str, content: str) -> None
+        set(filename: str, content: str) -> Nones
     """
     def __init__(self, cache_folder='cache'):
         self.path = f'./{cache_folder}'
