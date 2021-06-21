@@ -2,7 +2,5 @@
 www.etecsa.cu
 www.uci.cu
 evea.uh.cu
-www.uo.edu.cu
-www.uclv.edu.cu
-covid19cubadata.uh.cu
-www.uh.cu
+#www.uo.edu.cu
+

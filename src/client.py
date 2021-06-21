@@ -55,7 +55,10 @@ class Client:
 
         self.discoverer = WorkerDisc(self.inter_ip, pipe_sock)
         threading.Thread(
-            target=self.discoverer.start, name='Discoverer').start()
+            target=self.discoverer.start,
+            name='Discoverer',
+            daemon=True
+        ).start()
         logging.info('Discovering service started...')
 
         poller = zmq.Poller()
@@ -140,7 +143,7 @@ class Client:
                             }
                         )
                         logging.info(f'Requested {url}')
-                        time.sleep(1)   # TODO: remove this
+                        time.sleep(1)
 
             if not self.feeder:
                 logging.info('>>> Done!')

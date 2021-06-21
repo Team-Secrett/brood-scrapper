@@ -1,0 +1,12 @@
+**/.git
+**/.gitignore
+
+**/docker-compose.yml
+**/Dockerfile
+
+**/__pycache__
+**/.vscode
+**/venv
+
+**/cache
+**/result

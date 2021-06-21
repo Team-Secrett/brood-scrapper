@@ -1,0 +1,127 @@
+version: '3.8'
+
+services:
+    storage1:
+        image: brood-scrapper
+        container_name: storage1
+        volumes:
+            - cache1:/app/cache
+        command: python run_storage.py --ip 172.30.10.11 --port 1000 --cache cache
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.11
+
+    storage2:
+        image: brood-scrapper
+        container_name: storage2
+        volumes:
+            - cache2:/app/cache
+        command: python run_storage.py --ip 172.30.10.12 --port 1000 --cache cache --update
+        links:
+            - storage1
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.12
+
+    storage3:
+        image: brood-scrapper
+        container_name: storage3
+        volumes:
+            - cache3:/app/cache
+        command: python run_storage.py --ip 172.30.10.13 --port 1000 --cache cache --update
+        links:
+            - storage1
+            - storage2
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.13
+
+    worker1:
+        image: brood-scrapper
+        container_name: worker1
+        links:
+            - storage1
+            - storage2
+            - storage3
+        command: python run_worker.py --ip 172.30.10.21 --port 2000
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.21
+    
+    worker2:
+        image: brood-scrapper
+        container_name: worker2
+        links:
+            - storage1
+            - storage2
+            - storage3
+        command: python run_worker.py --ip 172.30.10.22 --port 2000
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.22
+
+    worker3:
+        image: brood-scrapper
+        container_name: worker3
+        links:
+            - storage1
+            - storage2
+            - storage3
+        command: python run_worker.py --ip 172.30.10.23 --port 2000
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.23
+    
+    client1:
+        image: brood-scrapper
+        container_name: client1
+        volumes:
+            - result1:/app/result
+            - urls:/app/urls
+        links:
+            - worker1
+            - worker2
+            - worker3
+        command: python run_client.py --ip 172.30.10.31 --file urls/urlcu.txt --n 2
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.31
+    
+    client2:
+        image: brood-scrapper
+        container_name: client2
+        volumes:
+            - result2:/app/result
+            - urls:/app/urls
+        links:
+            - worker1
+            - worker2
+            - worker3
+        command: python run_client.py --ip 172.30.10.32 --file urls/urlcu.txt
+        networks:
+            brood_net:
+                ipv4_address: 172.30.10.32
+
+volumes:
+    cache1:
+        name: cache1
+    cache2:
+        name: cache2
+    cache3:
+        name: cache3
+    result1:
+        name: result1
+    result2:
+        name: result2
+    urls:
+        external: true
+
+networks:
+    brood_net:
+        name: brood_net
+        driver: bridge
+        enable_ipv6: false
+        ipam:
+            driver: default
+            config:
+                - subnet: 172.30.10.0/24
