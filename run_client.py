@@ -18,12 +18,16 @@ parser.add_argument(
 )
 parser.add_argument(
     '--n', type=int, default=-1,
-    help='Max number of URLs to load. Use -1 for all'
+    help='Max number of URLs to load. Default -1, load all'
+)
+parser.add_argument(
+    '--depth', type=int, default=3,
+    help='Max depth scrapping urls in file. Default 3'
 )
 
 args = parser.parse_args()
 
-client = Client(args.ip, args.file, args.n)
+client = Client(args.ip, args.file, args.n, args.depth)
 
 try:
     client.start()

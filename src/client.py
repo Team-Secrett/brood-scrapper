@@ -10,7 +10,6 @@ import zmq
 from src.utils.client import UrlFeeder, WorkerDisc
 from src.utils.functions import random_id, pipe
 from src.utils.storage import Cache
-from src import settings
 from src.utils.html import HTMLParser, URLParser
 
 
@@ -27,7 +26,7 @@ class Client:
     Send requests with url and expects the HTML code.
     """
 
-    def __init__(self, ip, url_file, n):
+    def __init__(self, ip, url_file, n, depth):
         self.id = random_id()
         self.inter_ip = ip
         self.ctx = zmq.Context()
@@ -40,6 +39,7 @@ class Client:
         self.discoverer = None      # discovering service
 
         self.feeder = UrlFeeder(url_file, n)
+        self.depth = depth
 
         self.url_depths = {}
         self.cache = Cache(cache_folder='result')
@@ -116,8 +116,8 @@ class Client:
                             if res['url'] not in self.url_depths:
                                 self.url_depths[res['url']] = 0
                             depth = self.url_depths[res['url']]
-                            
-                            if depth + 1 < settings.MAX_DEPTH:
+
+                            if depth + 1 < self.depth:
                                 # Get urls in html content
                                 next_urls = HTMLParser.links(res['content'])
 

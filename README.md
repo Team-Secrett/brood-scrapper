@@ -118,33 +118,43 @@ Estos mensajes tienen toda la información necesaria para establecer la conexió
     }
     ```
 
+## Tolerancia a fallas
+
+Todos los nodos del mismo tipo pueden funcionar de forma independiente a sus semejantes y el sistema se adapta a estos cambios.
+
+Por ejemplo si un nodo de tipo worker cae o se mueve a una red a la que no tiene acceso el cliente, este en cuanto deje de recibir beacons notará la ausencia y dejará de enrutar pedidos hacia ese worker. Adicionalmente si los rquests de los clientes dan timeout estos volverán a hacerlos.
+
+De igual forma si un nodo storage cae o caen todos los que hay disponible los workers continuarán funcionando de forma correcta, en el caso que detecten que no hay ningún storage en pie comenzarán a procesar los pedidos de los clientes directamante en la fase de scrapping.
+
+Al un nodo storage entrar al sistema lo recomanedable es que solicite una update a otro storage que estaba en la red con anterioridad, esto se hace de forma automática y se solicita al primero que se descubra en la red. Al hacer esto el nodo replica la información, ya en este punto que las récplicas son iguales, las updates de caché posteriores se propagarán por igual entre los nodos de tipo storage y se mantendrá la misma información en cada nodo.
+
 # Instrucciones para ejecutar el ejemplo
 
 El proyecto viene listo para ser ejecutado en docker.
 
 Lo primero que se debe hacer es construir la imagen, para esto es necesario estar en la raíz del proyecto y ejecutar el siguiente comando:
 
-```cmd
+```
 docker image build -t brood-scrapper .
 ```
 
 Luego es necesario crear un volumen y nombrarlo `urls`, en ese volumen se van a colocar los ficheros de texto con las direcciones web que hay q analizar. Para hacer esto ejecutar el comando:
 
-```cmd
+```
 docker volume create urls
 ```
 
 Una vez esto hecho solo hay que ejecutar el comando:
 
-```cmd
+```
 docker-compose up -d
 ```
 
-Este comando según el `docker-compose.yml` va a levantar tres nodos de tipo storage (`storage1`, `storage2`, `storage3`), luego va levantar tres nodos de tipo worker (`worker1`, `worker2`, `worker3`) y dos clientes (`client1`, `client2`) que van a hacer requests. Estos nodos van a estar en la misma red (`brood-net`).
+Este comando según el `docker-compose.yml` va a levantar tres nodos de tipo storage (`storage1`, `storage2`, `storage3`), luego va levantar tres nodos de tipo worker (`worker1`, `worker2`, `worker3`) y dos clientes (`client1`, `client2`) que van a hacer requests. Estos nodos van a estar en la misma red (`brood_net`).
 
 Para comprobar el estado de cada uno de estos contenedores se puede ejecutar el comando:
 
-```cmd
+```
 docker logs <nombre> -f
 ```
 
@@ -165,13 +175,14 @@ docker container run -it --name <nombre> -v urls:/app/urls -v <res-vol>:/app/res
 ```
 donde `<nombre>` es el nombre que se desea dar al contenedor, `<res-vol>` el volumen donde almacenar los resultados devueltos por los workers, la dirección IP debe estar en la subred `172.30.10.0/24` y `<comando>` es el comando de inicio para ejecutar un cliente, siguiendo la estructura:
 ```
-usage: run_client.py [-h] --ip IP [--file FILE] [--n N]
+usage: run_client.py [-h] --ip IP [--file FILE] [--n N] [--depth DEPTH]
 
 optional arguments:
-  -h, --help   show this help message and exit
-  --ip IP      Interface IP address
-  --file FILE  File with URLs to be loaded
-  --n N        Max number of URLs to load. Use -1 for all
+  -h, --help     show this help message and exit
+  --ip IP        Interface IP address
+  --file FILE    File with URLs to be loaded
+  --n N          Max number of URLs to load. Default -1, load all
+  --depth DEPTH  Max depth scrapping urls in file. Default 3
 ```
 Donde el IP debe coincidir con la dirección IP que se pasó como parámetro al contenedor.
 
@@ -180,7 +191,7 @@ Opcionalemnte se puede usar `-d` en lugar de `-it`.
 Un ejemplo concreto sería el siguiente:
 
 ```
-docker container run --rm -d --name new_client -v urls:/app/urls -v new_results:/app/result --net brood_net --ip 172.30.10.88 brood-scrapper python run_client.py --ip 172.30.10.88 --file urls/new_urls.txt
+docker container run -d --name new_client -v urls:/app/urls -v new_results:/app/result --net brood_net --ip 172.30.10.88 brood-scrapper python run_client.py --ip 172.30.10.88 --file urls/new_urls.txt
 ```
 
 ### Nodos de tipo worker
@@ -217,7 +228,7 @@ Para añadir un nodo storage se puede seguir el formato siguiente:
 docker container run --rm -it --name <nombre> -v <cache_name>:/app/cache --net brood_net --ip <ip-del-contenedor> brood-scrapper <comando>
 ```
 
-donde `<nombre>` es el nombre que tedrá el contenedor, `<cache_name>` es el nombre del volumen donde se persistirá el caché, la IP es la que tendrá el contenedor en la subred `172.30.10.0/24` y el comando es el de inicio, siguiendo el formato siguiente:
+donde `<nombre>` es el nombre que tedrá el contenedor, `<cache_name>` es el nombre del volumen donde se persistirá el caché, la IP es la que tendrá el contenedor en la subred `172.30.10.0/24` y el `<comando>` es el de inicio, siguiendo el formato siguiente:
 
 ```
 usage: run_storage.py [-h] --ip IP --port PORT [--cache CACHE] [--update]
@@ -229,7 +240,7 @@ optional arguments:
   --cache CACHE  Cache folder path
   --update       If present this storage will update his cache
 ```
-y donde la dirección ip debe coincidir con la asignada al contenedor en la red. La bandera `--update` solo debe usarse si se conoce que hay otro nodo en la red, cuya caché hasta ese punto del tiempo, se desea replicar. Lo normal sería levantar el primer storage sin ella, y los posteriores con ella, para mantener todas las réplicas sincronizadas. Nótese que las actualizaciones de caché una vez que los nodos están levantados se propagan independientemente de si se replica en el inicio o no del nodo. Y una vez que un nodo se une, puede atender solicitudes para replicar la caché de otro nodo nuevo con la flag `--update`.
+y donde la dirección IP debe coincidir con la asignada al contenedor en la red. La bandera `--update` solo debe usarse si se conoce que hay otro nodo en la red, cuya caché hasta ese punto del tiempo se desea replicar. Lo normal sería levantar el primer storage sin ella, y los posteriores con ella, para mantener todas las réplicas sincronizadas. Nótese que las actualizaciones de caché una vez que los nodos están levantados se propagan independientemente de si se replica en el inicio o no del nodo. Y una vez que un nodo se une, puede atender solicitudes para replicar la caché de otro nodo nuevo con la flag `--update`.
 
 El parámetro `-it` puede ser reemplazado por `-d`.
 
@@ -240,7 +251,7 @@ docker container run --rm -d --name new_storage -v new_cache:/app/cache --net br
 
 ## Eliminar nodos del sistema
 
-Para eliminar un nodo ejecutandose en el container `<nombre-contenedor>` solo es necesario ejecutar el comando:
+Para eliminar un nodo ejecutándose en el container `<nombre-contenedor>` solo es necesario ejecutar el comando:
 
 ```
 docker container rm -f <nombre-contenedor>
