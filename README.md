@@ -161,7 +161,7 @@ Estos volúmenes anterioremente citados se puede verificar en el sistema de arch
 Para añadir un cliente puede usar el comando
 
 ```
-docker container run --rm -it --name <nombre> -v urls:/app/urls -v <res-vol>:/app/result --net brood_net --ip <ip-del-contenedor> brood-scrapper <comando>
+docker container run -it --name <nombre> -v urls:/app/urls -v <res-vol>:/app/result --net brood_net --ip <ip-del-contenedor> brood-scrapper <comando>
 ```
 donde `<nombre>` es el nombre que se desea dar al contenedor, `<res-vol>` el volumen donde almacenar los resultados devueltos por los workers, la dirección IP debe estar en la subred `172.30.10.0/24` y `<comando>` es el comando de inicio para ejecutar un cliente, siguiendo la estructura:
 ```
