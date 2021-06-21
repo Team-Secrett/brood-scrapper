@@ -25,8 +25,7 @@ args = parser.parse_args()
 
 client = Client(args.ip, args.file, args.n)
 
-client.start()
-# try:
-#     client.start()
-# except KeyboardInterrupt:
-#     print('>>> Stopped by user!')
+try:
+    client.start()
+except KeyboardInterrupt:
+    print('>>> Stopped by user!')

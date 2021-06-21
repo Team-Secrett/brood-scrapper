@@ -53,14 +53,20 @@ class Storage:
             self.address[0],
             STORAGE_MCAST_ADDR
         )
-        threading.Thread(target=self.ping_sender.start, name='Ping-Workers').start()
+        threading.Thread(
+            target=self.ping_sender.start,
+            name='Ping-Workers',
+            daemon=True
+        ).start()
         logging.info(f'Storage {self.id}: Ping service started...')
 
     def init_discovering_service(self):
         self.disc_sock, pipe_sock = pipe(self.ctx)
         self.discoverer = StorageDisc(self.address[0], pipe_sock)
         threading.Thread(
-            target=self.discoverer.start, name='Discoverer'
+            target=self.discoverer.start,
+            name='Discoverer',
+            daemon=True
         ).start()
         logging.info('Storage discovering service started...')
 

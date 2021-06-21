@@ -21,8 +21,7 @@ args = parser.parse_args()
 
 worker = Worker(args.ip, args.port)
 
-worker.start()
-# try:
-#     worker.start()
-# except KeyboardInterrupt:
-#     print('>>> Stopped by user!')
+try:
+    worker.start()
+except KeyboardInterrupt:
+    print('>>> Stopped by user!')

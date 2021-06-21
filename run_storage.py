@@ -28,7 +28,6 @@ args = parser.parse_args()
 
 storage = Storage(args.ip, args.port, args.cache, args.update)
 
-storage.start()
 try:
     storage.start()
 except KeyboardInterrupt:

@@ -40,13 +40,18 @@ class Worker:
         """
         # start scrapper thread
         threading.Thread(
-            target=Scrapper.start_scrapper, args=(self.monitor, ), name='Scrapper'
+            target=Scrapper.start_scrapper,
+            args=(self.monitor, ),
+            name='Scrapper',
+            daemon=True
         ).start()
         logging.info('Scrapper started...')
 
         # start caching pruner thread
         threading.Thread(
-            target=self.monitor.prune_caching, name='Caching-Pruner'
+            target=self.monitor.prune_caching,
+            name='Caching-Pruner',
+            daemon=True
         ).start()
 
         # start sock to talk with storage
@@ -56,7 +61,9 @@ class Worker:
         self.disc_sock, pipe_sock = pipe(self.ctx)
         self.discoverer = StorageDisc(self.address[0], pipe_sock)
         threading.Thread(
-            target=self.discoverer.start, name='Discoverer'
+            target=self.discoverer.start,
+            name='Discoverer',
+            daemon=True
         ).start()
         logging.info('Storage discovering serivce started...')
 
@@ -74,7 +81,9 @@ class Worker:
             settings.WORKER_MCAST_ADDR
         )
         threading.Thread(
-            target=self.ping_sender.start, name='Ping-Workers'
+            target=self.ping_sender.start,
+            name='Ping-Workers',
+            daemon=True
         ).start()
         logging.info('Ping service started...')
 
